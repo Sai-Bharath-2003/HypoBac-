@@ -1,0 +1,821 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>HypoBac | Hypothetical Bacterial Protein Database</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=JetBrains+Mono:wght@300;400;500&family=Outfit:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --ink:#080f1e;--ink2:#131f35;--teal:#00c9a7;--teal2:#00a589;--cyan:#00bcd4;
+  --amber:#ffb300;--red:#ef5350;--green:#00e5a0;
+  --glass:rgba(255,255,255,0.05);--border:rgba(0,201,167,0.18);--border2:rgba(0,201,167,0.35);
+  --ff-h:'DM Serif Display',serif;--ff-b:'Outfit',sans-serif;--ff-m:'JetBrains Mono',monospace;
+  --r:8px;--rl:16px;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{font-family:var(--ff-b);background:var(--ink);color:#e2eaf4;min-height:100vh;overflow-x:hidden}
+#bg-canvas{position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:0;opacity:.3}
+.page{position:relative;z-index:1}
+
+/* ── TOPBAR ── */
+.topbar{display:flex;align-items:center;justify-content:space-between;padding:0 28px;height:56px;
+  background:rgba(8,15,30,.93);backdrop-filter:blur(14px);border-bottom:1px solid var(--border);
+  position:sticky;top:0;z-index:100}
+.topbar-logo{display:flex;align-items:center;gap:10px;text-decoration:none}
+.logo-text .name{font-family:var(--ff-h);font-size:20px;color:var(--teal)}
+.logo-text .sub{font-size:9px;font-family:var(--ff-m);color:rgba(0,201,167,.5);letter-spacing:.12em;text-transform:uppercase}
+.nav-tabs{display:flex;gap:4px}
+.ntab{padding:6px 14px;border-radius:var(--r);border:none;background:transparent;
+  color:rgba(226,234,244,.6);font-family:var(--ff-b);font-size:13px;cursor:pointer;transition:all .2s}
+.ntab:hover,.ntab.active{background:var(--glass);color:var(--teal)}
+.bioclues-link{display:flex;align-items:center;gap:7px;padding:5px 12px;border-radius:99px;
+  border:1px solid var(--border);background:var(--glass);font-size:11px;
+  color:rgba(226,234,244,.55);text-decoration:none;transition:all .25s;font-family:var(--ff-m)}
+.bioclues-link:hover{border-color:var(--teal);color:var(--teal)}
+.bdot{width:6px;height:6px;border-radius:50%;background:var(--teal);animation:bdot 2s infinite}
+@keyframes bdot{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.4;transform:scale(.65)}}
+
+/* ── HERO ── */
+.hero{min-height:86vh;display:flex;flex-direction:column;align-items:center;
+  justify-content:center;text-align:center;padding:60px 24px 40px}
+.hero-eye{font-family:var(--ff-m);font-size:11px;letter-spacing:.2em;text-transform:uppercase;
+  color:var(--teal);margin-bottom:18px;opacity:0;animation:fup .7s .2s forwards}
+.hero-title{font-family:var(--ff-h);font-size:clamp(40px,7vw,82px);line-height:1.06;
+  color:#fff;margin-bottom:10px;opacity:0;animation:fup .7s .35s forwards}
+.hero-title em{font-style:italic;color:var(--teal)}
+.hero-sub{font-size:clamp(13px,2vw,17px);color:rgba(226,234,244,.5);max-width:560px;
+  line-height:1.7;margin-bottom:44px;opacity:0;animation:fup .7s .5s forwards}
+@keyframes fup{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
+
+/* ── SEARCH BOX ── */
+.search-wrap{width:100%;max-width:660px;opacity:0;animation:fup .7s .65s forwards}
+.type-tabs{display:flex;gap:6px;margin-bottom:10px;justify-content:center;flex-wrap:wrap}
+.ttab{padding:5px 14px;border-radius:99px;border:1px solid var(--border);background:transparent;
+  color:rgba(226,234,244,.45);font-family:var(--ff-m);font-size:11px;cursor:pointer;transition:all .2s;letter-spacing:.06em}
+.ttab.active{background:var(--teal);border-color:var(--teal);color:var(--ink);font-weight:600}
+.sbox{display:flex;align-items:center;background:rgba(255,255,255,.05);border:1.5px solid var(--border2);
+  border-radius:var(--rl);padding:4px 4px 4px 18px;gap:10px;transition:all .25s}
+.sbox:focus-within{border-color:var(--teal);box-shadow:0 0 0 3px rgba(0,201,167,.12),0 8px 30px rgba(0,0,0,.3)}
+#q{flex:1;background:none;border:none;outline:none;color:#fff;font-family:var(--ff-m);
+  font-size:14px;padding:11px 0}
+#q::placeholder{color:rgba(226,234,244,.25)}
+.sbtn{padding:11px 22px;border-radius:10px;border:none;background:var(--teal);color:var(--ink);
+  font-family:var(--ff-b);font-weight:600;font-size:14px;cursor:pointer;transition:all .2s;white-space:nowrap}
+.sbtn:hover{background:var(--teal2);transform:translateY(-1px)}
+.shint{margin-top:9px;font-size:11px;color:rgba(226,234,244,.28);font-family:var(--ff-m)}
+.shint span{color:rgba(0,201,167,.65);cursor:pointer}
+.shint span:hover{color:var(--teal)}
+
+/* ── STATS STRIP ── */
+.stats{display:flex;gap:1px;max-width:660px;width:100%;margin-top:36px;
+  opacity:0;animation:fup .7s .8s forwards}
+.spill{flex:1;background:var(--glass);border:1px solid var(--border);border-radius:var(--r);
+  padding:11px 8px;text-align:center}
+.spill .n{font-family:var(--ff-m);font-size:20px;color:var(--teal)}
+.spill .l{font-size:10px;color:rgba(226,234,244,.38);letter-spacing:.07em;text-transform:uppercase;margin-top:2px}
+
+/* ── RESULTS ── */
+.section{max-width:980px;margin:0 auto;padding:36px 24px}
+.sec-title{font-family:var(--ff-h);font-size:26px;color:#fff;margin-bottom:5px}
+.sec-sub{font-size:12px;color:rgba(226,234,244,.4);margin-bottom:24px;font-family:var(--ff-m)}
+.spinner{width:34px;height:34px;border:3px solid var(--border);border-top-color:var(--teal);
+  border-radius:50%;animation:spin .8s linear infinite;margin:36px auto}
+@keyframes spin{to{transform:rotate(360deg)}}
+.hidden{display:none!important}
+.results-grid{display:grid;gap:10px}
+
+/* ── RESULT CARD ── */
+.rcard{background:rgba(255,255,255,.04);border:1px solid var(--border);border-radius:var(--rl);
+  padding:18px 22px;cursor:pointer;transition:all .25s;
+  display:grid;grid-template-columns:auto 1fr auto auto;gap:14px;align-items:center}
+.rcard:hover{border-color:var(--teal);background:rgba(0,201,167,.05);transform:translateX(4px)}
+.hp-badge{width:54px;height:54px;border-radius:12px;display:flex;flex-direction:column;
+  align-items:center;justify-content:center;flex-shrink:0;
+  background:rgba(0,201,167,.1);border:1px solid rgba(0,201,167,.25)}
+.hp-badge .hpn{font-family:var(--ff-m);font-size:10px;color:var(--teal);font-weight:500}
+.hp-badge .hpl{font-family:var(--ff-m);font-size:13px;color:#fff;font-weight:600}
+.card-uid{font-family:var(--ff-m);font-size:14px;color:#fff;margin-bottom:3px}
+.card-org{font-size:13px;color:rgba(226,234,244,.5);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.card-domain{font-size:11px;color:rgba(226,234,244,.35);margin-top:3px;font-family:var(--ff-m)}
+.class-badge{padding:3px 12px;border-radius:99px;font-size:11px;font-weight:600;
+  font-family:var(--ff-m);white-space:nowrap;flex-shrink:0}
+.cb-path{background:rgba(239,83,80,.12);border:1px solid rgba(239,83,80,.3);color:#ef9a9a}
+.cb-none{background:rgba(0,201,167,.1);border:1px solid rgba(0,201,167,.25);color:var(--teal)}
+.cb-unk{background:var(--glass);border:1px solid var(--border);color:rgba(226,234,244,.4)}
+.score-mini{display:flex;gap:3px;flex-shrink:0}
+.sm-dot{width:8px;height:8px;border-radius:50%}
+.sm-hit{background:var(--teal)}
+.sm-miss{background:rgba(255,255,255,.12)}
+.arrow-ic{color:rgba(226,234,244,.2);font-size:20px;transition:all .2s}
+.rcard:hover .arrow-ic{color:var(--teal);transform:translateX(4px)}
+
+/* ── DETAIL OVERLAY ── */
+.overlay{position:fixed;inset:0;background:rgba(8,15,30,.88);backdrop-filter:blur(10px);
+  z-index:200;display:flex;align-items:center;justify-content:center;padding:20px;
+  opacity:0;pointer-events:none;transition:opacity .3s}
+.overlay.open{opacity:1;pointer-events:all}
+.dpanel{background:var(--ink2);border:1px solid var(--border2);border-radius:20px;
+  width:100%;max-width:820px;max-height:92vh;overflow-y:auto;
+  transform:translateY(18px);transition:transform .3s;position:relative}
+.overlay.open .dpanel{transform:translateY(0)}
+.dclose{position:absolute;top:18px;right:18px;width:30px;height:30px;border-radius:50%;
+  border:1px solid var(--border);background:var(--glass);color:rgba(226,234,244,.6);
+  font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .2s}
+.dclose:hover{border-color:var(--red);color:var(--red)}
+.dhead{padding:26px 28px 18px;border-bottom:1px solid var(--border)}
+.dbody{padding:22px 28px}
+.dgrid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:20px}
+.ibox{background:var(--glass);border:1px solid var(--border);border-radius:var(--r);padding:12px 14px}
+.ilbl{font-family:var(--ff-m);font-size:10px;letter-spacing:.1em;text-transform:uppercase;
+  color:rgba(226,234,244,.3);margin-bottom:4px}
+.ival{font-size:13px;color:#e2eaf4;word-break:break-all}
+.ival.mono{font-family:var(--ff-m);font-size:12px}
+.ival.teal{color:var(--teal)}
+code{font-family:var(--ff-m);font-size:12px;background:rgba(0,201,167,.1);padding:1px 5px;border-radius:4px;color:var(--teal)}
+
+/* ── WEKA SCORES PANEL ── */
+.weka-panel{background:rgba(0,0,0,.25);border:1px solid var(--border);border-radius:var(--r);
+  padding:18px 20px;margin-bottom:20px}
+.weka-title{font-family:var(--ff-m);font-size:11px;color:rgba(226,234,244,.35);
+  letter-spacing:.1em;text-transform:uppercase;margin-bottom:14px}
+.score-row{display:flex;align-items:center;gap:10px;padding:6px 0;
+  border-bottom:1px solid rgba(255,255,255,.04);font-size:12px}
+.score-row:last-child{border-bottom:none}
+.score-lbl{flex:1;color:rgba(226,234,244,.6)}
+.score-bar-wrap{width:100px;height:6px;background:rgba(255,255,255,.08);border-radius:3px}
+.score-bar{height:6px;border-radius:3px;background:var(--teal)}
+.score-bar.miss{background:rgba(255,255,255,.12)}
+.score-val{font-family:var(--ff-m);font-size:11px;width:24px;text-align:right}
+.sv-hit{color:var(--teal)}
+.sv-miss{color:rgba(226,234,244,.25)}
+.total-chip{display:inline-block;padding:4px 12px;border-radius:99px;font-family:var(--ff-m);
+  font-size:12px;margin-top:12px}
+.tc-path{background:rgba(239,83,80,.12);border:1px solid rgba(239,83,80,.3);color:#ef9a9a}
+.tc-none{background:rgba(0,201,167,.1);border:1px solid rgba(0,201,167,.25);color:var(--teal)}
+
+/* ── BLAST PLACEHOLDER ── */
+.blast-box{background:rgba(255,179,0,.05);border:1px solid rgba(255,179,0,.2);
+  border-radius:var(--r);padding:14px 18px;margin-bottom:20px}
+.blast-title{font-family:var(--ff-m);font-size:11px;color:rgba(255,179,0,.6);
+  letter-spacing:.1em;text-transform:uppercase;margin-bottom:8px}
+.blast-body{font-size:12px;color:rgba(226,234,244,.4);line-height:1.6}
+.blast-btn{margin-top:10px;padding:7px 18px;border-radius:var(--r);border:1px solid rgba(255,179,0,.3);
+  background:transparent;color:rgba(255,179,0,.6);font-family:var(--ff-m);font-size:11px;
+  cursor:not-allowed;opacity:.6}
+
+/* ── HP BROWSER VIEW ── */
+.hp-table-wrap{overflow-x:auto}
+.hp-table{width:100%;border-collapse:collapse;font-size:12px}
+.hp-table th{font-family:var(--ff-m);font-size:10px;letter-spacing:.07em;text-transform:uppercase;
+  color:rgba(226,234,244,.3);padding:8px 10px;text-align:left;border-bottom:1px solid var(--border);
+  white-space:nowrap;cursor:pointer}
+.hp-table th:hover{color:var(--teal)}
+.hp-table td{padding:7px 10px;border-bottom:1px solid rgba(255,255,255,.04);
+  font-family:var(--ff-m);font-size:11px;cursor:pointer}
+.hp-table tr:hover td{background:var(--glass)}
+.hp-table tr:last-child td{border-bottom:none}
+.dot-hit{display:inline-block;width:9px;height:9px;border-radius:50%;background:var(--teal)}
+.dot-miss{display:inline-block;width:9px;height:9px;border-radius:50%;background:rgba(255,255,255,.12)}
+.filter-row{display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap;align-items:center}
+.fchip{padding:5px 12px;border-radius:99px;border:1px solid var(--border);background:transparent;
+  color:rgba(226,234,244,.5);font-family:var(--ff-m);font-size:11px;cursor:pointer;transition:all .2s}
+.fchip.active{background:var(--teal);border-color:var(--teal);color:var(--ink);font-weight:600}
+
+/* ── ABOUT / BLAST INFO ── */
+.about-grid{display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-top:20px}
+.acard{background:var(--glass);border:1px solid var(--border);border-radius:var(--rl);padding:20px 22px}
+.acard-title{font-family:var(--ff-h);font-size:20px;color:#fff;margin-bottom:10px}
+.acard-body{font-size:13px;color:rgba(226,234,244,.5);line-height:1.7}
+.acard-body strong{color:#e2eaf4}
+.blast-approach{background:rgba(255,179,0,.05);border:1px solid rgba(255,179,0,.2);
+  border-radius:var(--rl);padding:20px 22px;margin-top:14px}
+.ba-title{font-family:var(--ff-m);font-size:12px;color:rgba(255,179,0,.7);
+  letter-spacing:.1em;text-transform:uppercase;margin-bottom:12px}
+.ba-row{display:flex;gap:12px;padding:8px 0;border-bottom:1px solid rgba(255,255,255,.04);
+  font-size:12px;align-items:flex-start}
+.ba-row:last-child{border-bottom:none}
+.ba-num{width:22px;height:22px;border-radius:50%;background:rgba(255,179,0,.15);
+  color:rgba(255,179,0,.8);font-size:11px;font-weight:600;display:flex;
+  align-items:center;justify-content:center;flex-shrink:0;margin-top:1px}
+.ba-body{color:rgba(226,234,244,.55);line-height:1.6;flex:1}
+.ba-body strong{color:#e2eaf4}
+
+/* ── REFRESH ── */
+.refresh-bar{position:fixed;bottom:24px;right:24px;z-index:90;display:flex;flex-direction:column;gap:8px;align-items:flex-end}
+.rbtn{display:flex;align-items:center;gap:8px;padding:9px 16px;border-radius:99px;
+  border:1.5px solid var(--border2);background:var(--ink2);color:rgba(226,234,244,.65);
+  font-family:var(--ff-m);font-size:12px;cursor:pointer;transition:all .25s;backdrop-filter:blur(8px)}
+.rbtn:hover{border-color:var(--teal);color:var(--teal)}
+.rbtn.glow{border-color:var(--teal);color:var(--teal);animation:gpulse 2s infinite}
+@keyframes gpulse{0%,100%{box-shadow:0 0 0 0 rgba(0,201,167,.3)}50%{box-shadow:0 0 0 8px rgba(0,201,167,0)}}
+.rtoast{background:var(--ink2);border:1px solid var(--border);border-radius:var(--rl);
+  padding:12px 16px;font-size:12px;font-family:var(--ff-m);max-width:280px;line-height:1.6;
+  color:rgba(226,234,244,.65)}
+.rtoast .rt{color:var(--teal);font-size:13px;margin-bottom:5px}
+.rtoast .rr{display:flex;justify-content:space-between;gap:12px}
+.rtoast .rv{color:#fff}
+
+/* ── FOOTER ── */
+footer{border-top:1px solid var(--border);padding:28px 24px}
+.foot-inner{max-width:980px;margin:0 auto;display:flex;align-items:center;
+  justify-content:space-between;flex-wrap:wrap;gap:12px}
+.foot-copy{font-size:11px;color:rgba(226,234,244,.2);font-family:var(--ff-m)}
+.foot-links{display:flex;gap:16px}
+.foot-links a{font-size:11px;color:rgba(226,234,244,.3);text-decoration:none;
+  font-family:var(--ff-m);transition:color .2s}
+.foot-links a:hover{color:var(--teal)}
+
+@media(max-width:680px){
+  .topbar-nav,.bioclues-link{display:none}
+  .dgrid{grid-template-columns:1fr}
+  .about-grid{grid-template-columns:1fr}
+  .score-mini{display:none}
+}
+.empty-state{text-align:center;padding:52px 20px;color:rgba(226,234,244,.28);font-family:var(--ff-m);font-size:13px}
+</style>
+</head>
+<body>
+
+<canvas id="bg-canvas"></canvas>
+
+<div class="page">
+
+<!-- TOPBAR -->
+<header class="topbar">
+  <a class="topbar-logo" href="#">
+    <svg width="34" height="34" viewBox="0 0 34 34" fill="none">
+      <circle cx="17" cy="17" r="14" stroke="#00c9a7" stroke-width="1.5" fill="none" opacity=".3"/>
+      <path d="M17 6 C17 6 24 11 24 17 C24 23 17 28 17 28 C17 28 10 23 10 17 C10 11 17 6 17 6Z" stroke="#00c9a7" stroke-width="1.5" fill="none"/>
+      <circle cx="17" cy="17" r="3" fill="#00c9a7"/>
+      <line x1="6" y1="17" x2="28" y2="17" stroke="#00c9a7" stroke-width="1" opacity=".4"/>
+      <line x1="17" y1="6" x2="17" y2="28" stroke="#00c9a7" stroke-width="1" opacity=".4"/>
+    </svg>
+    <div class="logo-text">
+      <div class="name">HypoBac</div>
+      <div class="sub">Hypothetical Bacterial Proteins</div>
+    </div>
+  </a>
+  <nav class="nav-tabs" id="nav-tabs">
+    <button class="ntab active" onclick="showView('search')">Search</button>
+    <button class="ntab" onclick="showView('browser')">HP Browser</button>
+    <button class="ntab" onclick="showView('about')">About &amp; BLAST</button>
+  </nav>
+  <a class="bioclues-link" href="https://bioclues.org" target="_blank" rel="noopener">
+    <span class="bdot"></span>bioclues.org
+  </a>
+</header>
+
+<!-- ══ SEARCH VIEW ══ -->
+<div id="view-search">
+  <section class="hero">
+    <p class="hero-eye">Bioclues Collaboration &middot; Hypothetical Bacterial Protein Database</p>
+    <h1 class="hero-title">Search <em>Hypothetical</em><br>Bacterial Proteins</h1>
+    <p class="hero-sub">Query by organism name, domain keyword, or HP label across 1000+ hypothetical proteins with WEKA-based pathogenicity classification and live UniProt data.</p>
+
+    <div class="search-wrap">
+      <div class="type-tabs">
+        <button class="ttab active" data-type="organism" onclick="setType(this,'organism')">Organism Name</button>
+        <button class="ttab" data-type="domain" onclick="setType(this,'domain')">Domain / Keyword</button>
+        <button class="ttab" data-type="hp" onclick="setType(this,'hp')">HP Label</button>
+        <button class="ttab" data-type="uniprot" onclick="setType(this,'uniprot')">UniProt ID</button>
+      </div>
+      <div class="sbox">
+        <span style="color:var(--teal);font-size:17px">&#9678;</span>
+        <input id="q" type="text" placeholder="e.g. Streptococcus pyogenes, kinase domain, HP47&hellip;" autocomplete="off" onkeydown="if(event.key==='Enter')doSearch()">
+        <button class="sbtn" onclick="doSearch()">Search &rarr;</button>
+      </div>
+      <p class="shint">
+        <p style="font-size:11px;color:rgba(226,234,244,.35);font-family:var(--ff-m);margin-bottom:6px">Try: <span onclick="quickSearch#9432; Organism &amp; domain search improves as UniProt data is cached. Start with HP label or UniProt ID.</p>
+      <p class="shint">Try: <span onclick="quickSearch('Streptococcus','organism')">Streptococcus</span>
+        &middot; <span onclick="quickSearch('kinase','domain')">kinase domain</span>
+        &middot; <span onclick="quickSearch('HP1','hp')">HP1</span>
+        &middot; <span onclick="quickSearch('A0AUZ9','uniprot')">A0AUZ9</span>
+      </p>
+    </div>
+
+    <div class="stats">
+      <div class="spill"><div class="n" id="st-proteins">&#8212;</div><div class="l">Proteins</div></div>
+      <div class="spill"><div class="n" id="st-weka">314</div><div class="l">WEKA Records</div></div>
+      <div class="spill"><div class="n" id="st-path">206</div><div class="l">Pathogenic</div></div>
+      <div class="spill"><div class="n" id="st-none">108</div><div class="l">Non-pathogenic</div></div>
+      <div class="spill"><div class="n" id="st-cached">&#8212;</div><div class="l">UniProt Cached</div></div>
+    </div>
+  </section>
+
+  <div class="section" id="results-section" style="display:none">
+    <h2 class="sec-title" id="res-title">Results</h2>
+    <p class="sec-sub" id="res-sub"></p>
+    <div id="spinner" class="spinner hidden"></div>
+    <div id="results-grid" class="results-grid"></div>
+    <div id="empty-state" class="empty-state hidden">
+      No proteins found. Try a broader term, or check that Flask is running on port 5001.
+    </div>
+  </div>
+</div>
+
+<!-- ══ HP BROWSER VIEW ══ -->
+<div id="view-browser" class="hidden">
+  <div class="section">
+    <h2 class="sec-title">HP Browser</h2>
+    <p class="sec-sub">All 314 hypothetical proteins with WEKA classification scores &middot; Click any row for details</p>
+    <div class="filter-row">
+      <button class="fchip active" onclick="filterHP(this,'all')">All (314)</button>
+      <button class="fchip" onclick="filterHP(this,'1')">&#x25cf; Pathogenic (206)</button>
+      <button class="fchip" onclick="filterHP(this,'0')">&#x25cb; Non-pathogenic (108)</button>
+    </div>
+    <div id="hp-spinner" class="spinner"></div>
+    <div id="hp-table-wrap" class="hp-table-wrap hidden"></div>
+  </div>
+</div>
+
+<!-- ══ ABOUT & BLAST VIEW ══ -->
+<div id="view-about" class="hidden">
+  <div class="section">
+    <h2 class="sec-title">About HypoBac</h2>
+    <p class="sec-sub">Hypothetical bacterial protein classification using machine learning &middot; Bioclues collaboration</p>
+    <div class="about-grid">
+      <div class="acard">
+        <div class="acard-title">What is HypoBac?</div>
+        <div class="acard-body">
+          HypoBac is a database of <strong>hypothetical proteins (HPs)</strong> identified in bacterial genomes — proteins that exist in the genome sequence but have no experimentally confirmed function.<br><br>
+          Using the <strong>WEKA machine learning framework</strong>, each HP is scored across 7 bioinformatics criteria and classified as pathogenic (CLASS=1) or non-pathogenic (CLASS=0).<br><br>
+          Protein data is fetched live from the <strong>UniProt REST API</strong> and cached locally, giving researchers real-time access to organism names, domain annotations, and FASTA sequences.
+        </div>
+      </div>
+      <div class="acard">
+        <div class="acard-title">The 7 WEKA Criteria</div>
+        <div class="acard-body">
+          <strong>C1</strong> Protein Family Score — matches a known protein family<br>
+          <strong>C2</strong> Orthology Score — has orthologs in other organisms<br>
+          <strong>C3</strong> Protein Interaction Score — participates in known PPIs<br>
+          <strong>C4</strong> BBH Score — Best Bidirectional BLAST Hit confirms homology<br>
+          <strong>C5</strong> Sorting Signal Score — has signal peptide or motif<br>
+          <strong>C6</strong> Linked to Pseudogenes — connected to pseudogene regions<br>
+          <strong>C7</strong> Homology Modelling Score — 3D structure can be modelled<br><br>
+          <strong>CLASS=1</strong> (206 proteins) = predicted pathogenic<br>
+          <strong>CLASS=0</strong> (108 proteins) = predicted non-pathogenic
+        </div>
+      </div>
+    </div>
+
+    <!-- BLAST APPROACHES -->
+    <div class="blast-approach" style="margin-top:20px">
+      <div class="ba-title">&#x26A1; BLAST Integration — 3 Approaches (planned)</div>
+      <div class="ba-row">
+        <div class="ba-num">1</div>
+        <div class="ba-body">
+          <strong>NCBI BLAST REST API (recommended)</strong> — Free, no installation. User pastes a sequence, backend submits a job to <code>blast.ncbi.nlm.nih.gov/blast/Blast.cgi</code>, polls every 5s until complete, returns hits. Best for: web-based search against the full NR database. Limitation: slow (30–120s per search).
+        </div>
+      </div>
+      <div class="ba-row">
+        <div class="ba-num">2</div>
+        <div class="ba-body">
+          <strong>Local BLAST against HypoBac sequences</strong> — Install BLAST+ locally, build a database from the 1000+ HypoBac FASTA sequences. Search runs in &lt;2s. Best for: fast in-portal searches against only our protein set. Limitation: needs BLAST+ installed on the server, and FASTA sequences pre-downloaded.
+        </div>
+      </div>
+      <div class="ba-row">
+        <div class="ba-num">3</div>
+        <div class="ba-body">
+          <strong>BioPython BLAST wrapper</strong> — Python library that wraps the NCBI BLAST API cleanly. Simplest to code, same speed as option 1. Best for: quick integration with minimal new code. We would add one new Flask route <code>POST /api/blast</code> that accepts a sequence and returns hits with e-value, identity %, and alignment.
+        </div>
+      </div>
+      <div style="margin-top:12px;font-size:12px;color:rgba(226,234,244,.35);font-family:var(--ff-m)">
+        Recommended: Start with Approach 3 (BioPython) for the backend route, then upgrade to Approach 2 (local BLAST) once FASTA sequences are downloaded. The frontend BLAST button below is already wired — just needs the backend route.
+      </div>
+    </div>
+
+    <div class="acard" style="margin-top:14px">
+      <div class="acard-title">Bioclues Collaboration</div>
+      <div class="acard-body">
+        HypoBac is developed as part of the <strong>Bioclues</strong> research initiative — BIOinformatics CLUb for Experimenting Scientists.<br><br>
+        HoriGene: <a href="https://bioclues.org/horigene/" target="_blank" style="color:var(--teal)">bioclues.org/horigene</a><br>
+        Bioclues: <a href="https://bioclues.org" target="_blank" style="color:var(--teal)">bioclues.org</a><br><br>
+        Both HypoBac and HoriGene are designed to be integrated into the Bioclues web infrastructure. The backends run on separate ports (5000 and 5001) and can be served from the same server under different subpaths (<code>/horigene/</code> and <code>/hypobac/</code>).
+      </div>
+    </div>
+  </div>
+</div>
+
+<footer>
+  <div class="foot-inner">
+    <span class="foot-copy">&copy; 2025 HypoBac &middot; Bioclues Research &middot; Hypothetical Bacterial Protein Database</span>
+    <div class="foot-links">
+      <a href="https://bioclues.org" target="_blank">bioclues.org</a>
+      <a href="https://bioclues.org/horigene/" target="_blank">HoriGene</a>
+      <a href="https://rest.uniprot.org" target="_blank">UniProt API</a>
+    </div>
+  </div>
+</footer>
+</div>
+
+<!-- PROTEIN DETAIL OVERLAY -->
+<div class="overlay" id="overlay" onclick="closeOverlay(event)">
+  <div class="dpanel" id="dpanel">
+    <button class="dclose" onclick="closeOverlayBtn()">&#x2715;</button>
+    <div class="dhead" id="dhead"></div>
+    <div class="dbody" id="dbody"></div>
+  </div>
+</div>
+
+<!-- REFRESH BAR -->
+<div class="refresh-bar">
+  <div id="rtoast" class="rtoast hidden"></div>
+  <button class="rbtn hidden" id="refresh-btn" onclick="doRefresh()"
+    style="background:rgba(0,201,167,.1);border-color:var(--teal);color:var(--teal)">
+    &#x21BB; Refresh Data
+  </button>
+  <button class="rbtn" id="check-btn" onclick="doCheck()">&#x27F3; Check for Updates</button>
+</div>
+
+<script>
+// ── PARTICLE BACKGROUND ──────────────────────────────────────────────────────
+(function(){
+  var c=document.getElementById('bg-canvas'),ctx=c.getContext('2d'),W,H,t=0;
+  var particles=[];
+  function resize(){W=c.width=innerWidth;H=c.height=innerHeight;
+    particles=[];
+    for(var i=0;i<60;i++) particles.push({x:Math.random()*W,y:Math.random()*H,
+      vx:(Math.random()-.5)*.3,vy:(Math.random()-.5)*.3,r:Math.random()*2+1,
+      a:Math.random()*.5+.1});
+  }
+  window.addEventListener('resize',resize);resize();
+  // DNA strands
+  var STRANDS=2;
+  function draw(){
+    ctx.clearRect(0,0,W,H); t+=.007;
+    // particles
+    particles.forEach(function(p){
+      p.x+=p.vx; p.y+=p.vy;
+      if(p.x<0||p.x>W)p.vx*=-1;
+      if(p.y<0||p.y>H)p.vy*=-1;
+      ctx.beginPath();ctx.arc(p.x,p.y,p.r,0,Math.PI*2);
+      ctx.fillStyle='rgba(0,201,167,'+p.a+')';ctx.fill();
+    });
+    // connect nearby particles
+    for(var i=0;i<particles.length;i++){
+      for(var j=i+1;j<particles.length;j++){
+        var dx=particles[i].x-particles[j].x,dy=particles[i].y-particles[j].y;
+        var d=Math.sqrt(dx*dx+dy*dy);
+        if(d<100){
+          ctx.beginPath();ctx.moveTo(particles[i].x,particles[i].y);
+          ctx.lineTo(particles[j].x,particles[j].y);
+          ctx.strokeStyle='rgba(0,201,167,'+(0.06*(1-d/100))+')';
+          ctx.lineWidth=.5;ctx.stroke();
+        }
+      }
+    }
+    // DNA helices on sides
+    for(var s=0;s<STRANDS;s++){
+      var xb=(s===0?W*.08:W*.92),amp=30,freq=.022,ph=s*1.5;
+      for(var strand=0;strand<2;strand++){
+        var po=strand*Math.PI;
+        ctx.beginPath();
+        for(var y=-10;y<H+10;y+=4){
+          var x=xb+Math.sin(y*freq+t+ph+po)*amp;
+          y===-10?ctx.moveTo(x,y):ctx.lineTo(x,y);
+        }
+        var g=ctx.createLinearGradient(0,0,0,H);
+        var col=strand===0?'0,201,167':'0,188,212';
+        g.addColorStop(0,'rgba('+col+',0)');g.addColorStop(.3,'rgba('+col+',.35)');
+        g.addColorStop(.7,'rgba('+col+',.35)');g.addColorStop(1,'rgba('+col+',0)');
+        ctx.strokeStyle=g;ctx.lineWidth=1.2;ctx.stroke();
+      }
+      for(var ri=0;ri<14;ri++){
+        var ry=(ri/14)*H+(t*15)%(H/14);
+        if(ry<0||ry>H)continue;
+        var rx1=xb+Math.sin(ry*freq+t+ph)*amp;
+        var rx2=xb+Math.sin(ry*freq+t+ph+Math.PI)*amp;
+        var al=.08+.18*Math.abs(Math.sin(ry*freq+t+ph));
+        ctx.beginPath();ctx.moveTo(rx1,ry);ctx.lineTo(rx2,ry);
+        ctx.strokeStyle='rgba(0,201,167,'+al+')';ctx.lineWidth=.8;ctx.stroke();
+      }
+    }
+    requestAnimationFrame(draw);
+  }
+  draw();
+})();
+
+// ── APP STATE ────────────────────────────────────────────────────────────────
+var API='http://localhost:5001';
+var currentType='organism';
+var allWekaRows=[];
+var wekaLoaded=false;
+
+// ── VIEWS ────────────────────────────────────────────────────────────────────
+function showView(v){
+  ['search','browser','about'].forEach(function(n){
+    document.getElementById('view-'+n).classList.toggle('hidden',n!==v);
+  });
+  document.querySelectorAll('.ntab').forEach(function(b,i){
+    b.classList.toggle('active',['search','browser','about'][i]===v);
+  });
+  if(v==='browser')loadHPBrowser();
+}
+
+// ── STATS ────────────────────────────────────────────────────────────────────
+async function loadStats(){
+  try{
+    var r=await fetch(API+'/api/stats');
+    var d=await r.json();
+    document.getElementById('st-proteins').textContent=d.total_proteins??'0';
+    document.getElementById('st-path').textContent=d.pathogenic??'206';
+    document.getElementById('st-none').textContent=d.non_pathogenic??'108';
+    document.getElementById('st-cached').textContent=d.cached??'0';
+  }catch(e){console.warn('Backend not reachable on port 5001');}
+}
+loadStats();
+
+// ── SEARCH TYPE ──────────────────────────────────────────────────────────────
+function setType(el,type){
+  currentType=type;
+  document.querySelectorAll('.ttab').forEach(function(t){t.classList.remove('active');});
+  el.classList.add('active');
+  var ph={organism:'e.g. Streptococcus pyogenes, Escherichia coli\u2026',
+          domain:'e.g. kinase, membrane, helicase, signal peptide\u2026',
+          hp:'e.g. HP1, HP47, HP200\u2026',
+          uniprot:'e.g. A0AUZ9, A0AVK6\u2026'};
+  document.getElementById('q').placeholder=ph[type]||'';
+}
+
+function quickSearch(q,type){
+  document.getElementById('q').value=q;
+  document.querySelectorAll('.ttab').forEach(function(t){
+    if(t.dataset.type===type)t.click();
+  });
+  doSearch();
+}
+
+// ── SEARCH ───────────────────────────────────────────────────────────────────
+async function doSearch(){
+  var q=document.getElementById('q').value.trim();
+  if(!q)return;
+  var sec=document.getElementById('results-section'),grid=document.getElementById('results-grid');
+  var spin=document.getElementById('spinner'),empty=document.getElementById('empty-state');
+  var title=document.getElementById('res-title'),sub=document.getElementById('res-sub');
+  sec.style.display='block';spin.classList.remove('hidden');
+  grid.innerHTML='';empty.classList.add('hidden');
+  title.textContent='Searching\u2026';sub.textContent='';
+
+  try{
+    var url=API+'/api/search?q='+encodeURIComponent(q)+'&type='+currentType+'&limit=30';
+    var r=await fetch(url);
+    var d=await r.json();
+    spin.classList.add('hidden');
+    title.textContent='Results for \u201c'+q+'\u201d';
+    sub.textContent=d.total+' protein'+(d.total!==1?'s':'')+' found \u00b7 '+currentType+' search';
+    if(!d.results||d.results.length===0){empty.classList.remove('hidden');return;}
+    grid.innerHTML=d.results.map(buildCard).join('');
+  }catch(e){
+    spin.classList.add('hidden');
+    title.textContent='Backend not reachable';
+    sub.textContent='Make sure Flask is running on localhost:5001 \u2014 run: python run.py';
+  }
+}
+
+function buildCard(p){
+  var hp=p.hp_label||'';
+  var cls=p.class_label===1?'cb-path':p.class_label===0?'cb-none':'cb-unk';
+  var clst=p.class_label===1?'Pathogenic':p.class_label===0?'Non-pathogenic':'Unknown';
+  var dots='';
+  if(p.scores){
+    var keys=['c1_protein_family','c2_orthology','c3_interaction','c4_bbh','c5_sorting_signal','c6_pseudogene','c7_homology'];
+    dots='<div class="score-mini">'+keys.map(function(k){
+      return '<div class="sm-dot '+(p.scores[k]?'sm-hit':'sm-miss')+'"></div>';
+    }).join('')+'</div>';
+  }
+  return '<div class="rcard" onclick="openDetail(\''+p.uniprot_id+'\')">'
+    +'<div class="hp-badge"><div class="hpn">HP</div><div class="hpl">'+(hp?hp.replace('HP',''):'?')+'</div></div>'
+    +'<div><div class="card-uid">'+(p.uniprot_id||'Unknown ID')+'</div>'
+    +'<div class="card-org">'+(p.organism||'Organism: fetching from UniProt\u2026')+'</div>'
+    +(p.domains?'<div class="card-domain">'+p.domains.split(',').slice(0,2).join(' \u00b7 ')+'</div>':'')+'</div>'
+    +dots
+    +'<span class="class-badge '+cls+'">'+clst+'</span>'
+    +'<span class="arrow-ic">\u203a</span>'
+    +'</div>';
+}
+
+// ── DETAIL PANEL ─────────────────────────────────────────────────────────────
+async function openDetail(uid){
+  if(!uid)return;
+  var overlay=document.getElementById('overlay');
+  var dhead=document.getElementById('dhead'),dbody=document.getElementById('dbody');
+  dhead.innerHTML='<div class="spinner" style="margin:0 auto"></div>';
+  dbody.innerHTML='';
+  overlay.classList.add('open');
+  document.body.style.overflow='hidden';
+
+  try{
+    var r=await fetch(API+'/api/protein/'+encodeURIComponent(uid));
+    var d=await r.json();
+    if(d.error){dbody.innerHTML='<p style="color:rgba(226,234,244,.4);padding:16px">'+d.error+'</p>';return;}
+
+    var p=d.protein,a=d.annotation||{},w=d.weka;
+    var cls=w&&w.class_label===1?'cb-path':w&&w.class_label===0?'cb-none':'cb-unk';
+    var clst=w?w.class_text:'Unknown';
+
+    dhead.innerHTML='<div style="display:flex;align-items:flex-start;gap:14px">'
+      +'<div style="width:60px;height:60px;border-radius:12px;background:rgba(0,201,167,.1);'
+      +'border:1px solid rgba(0,201,167,.25);display:flex;flex-direction:column;'
+      +'align-items:center;justify-content:center;flex-shrink:0">'
+      +'<div style="font-family:var(--ff-m);font-size:9px;color:var(--teal)">HP</div>'
+      +'<div style="font-family:var(--ff-m);font-size:16px;color:#fff;font-weight:600">'
+      +(p.hp_label?p.hp_label.replace('HP',''):'?')+'</div></div>'
+      +'<div><div style="font-family:var(--ff-m);font-size:18px;color:#fff;margin-bottom:3px">'+uid+'</div>'
+      +'<div style="font-size:13px;color:rgba(226,234,244,.5)">'+(a.organism||'Loading organism from UniProt\u2026')+'</div>'
+      +'<div style="margin-top:6px"><span class="class-badge '+cls+'">'+clst+'</span>'
+      +(p.hp_label?'&nbsp;<span style="font-family:var(--ff-m);font-size:11px;color:rgba(226,234,244,.35)">'+p.hp_label+'</span>':'')
+      +'</div></div></div>';
+
+    var html='<div class="dgrid">'
+      +'<div class="ibox"><div class="ilbl">UniProt ID</div><div class="ival mono teal">'+uid+'</div></div>'
+      +'<div class="ibox"><div class="ilbl">Organism</div><div class="ival">'+(a.organism||'\u2014')+'</div></div>'
+      +'<div class="ibox"><div class="ilbl">Protein Name</div><div class="ival">'+(a.protein_name||'Hypothetical protein')+'</div></div>'
+      +'<div class="ibox"><div class="ilbl">Gene Name</div><div class="ival mono">'+(a.gene_name||'\u2014')+'</div></div>'
+      +'<div class="ibox"><div class="ilbl">Sequence Length</div><div class="ival mono">'+(a.sequence_length?a.sequence_length+' aa':'\u2014')+'</div></div>'
+      +'<div class="ibox"><div class="ilbl">Is Repeat</div><div class="ival">'+(p.is_repeat?'Yes':'No')+'</div></div>'
+      +'</div>';
+
+    // Domains
+    if(a.domains){
+      html+='<div class="ibox" style="margin-bottom:12px">'
+        +'<div class="ilbl">Domains</div>'
+        +'<div class="ival" style="font-size:12px">'+a.domains+'</div></div>';
+    }
+
+    // Function
+    if(a.function){
+      html+='<div class="ibox" style="margin-bottom:16px">'
+        +'<div class="ilbl">Function</div>'
+        +'<div class="ival" style="font-size:12px;line-height:1.6">'+a.function+'</div></div>';
+    }
+
+    // WEKA scores
+    if(w&&w.scores){
+      html+='<div class="weka-panel"><div class="weka-title">WEKA Classification Scores</div>';
+      w.scores.forEach(function(s){
+        var hit=s.value===1||s.value===1.0;
+        html+='<div class="score-row">'
+          +'<span class="score-lbl" title="'+s.description+'">'+s.label+'</span>'
+          +'<div class="score-bar-wrap"><div class="score-bar'+(hit?'':' miss')+'" style="width:'+(hit?'100':'0')+'%"></div></div>'
+          +'<span class="score-val '+(hit?'sv-hit':'sv-miss')+'">'+(hit?'1':'0')+'</span></div>';
+      });
+      html+='<div><span class="total-chip '+(w.class_label===1?'tc-path':'tc-none')+'">'
+        +w.total_hits+' / '+w.max_hits+' criteria met &mdash; '+w.class_text+'</span></div>';
+      html+='</div>';
+    }
+
+    // Related IDs
+    if(d.related&&d.related.length>0){
+      html+='<div class="ibox" style="margin-bottom:14px">'
+        +'<div class="ilbl">Related / Isoform IDs</div>'
+        +'<div style="display:flex;flex-wrap:wrap;gap:5px;margin-top:6px">'
+        +d.related.map(function(rel){
+          return '<span onclick="closeOverlayBtn();openDetail(\''+rel.uniprot_id+'\')" '
+            +'style="font-family:var(--ff-m);font-size:11px;padding:2px 8px;border-radius:4px;'
+            +'background:rgba(0,201,167,.08);border:1px solid rgba(0,201,167,.2);'
+            +'color:var(--teal);cursor:pointer">'
+            +rel.uniprot_id+(rel.in_db?' \u2197':'')+'</span>';
+        }).join('')+'</div></div>';
+    }
+
+    // External links
+    html+='<div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px">'
+      +'<a href="'+p.uniprot_url+'" target="_blank" style="padding:7px 14px;border-radius:var(--r);'
+      +'border:1px solid var(--border);color:var(--teal);text-decoration:none;'
+      +'font-family:var(--ff-m);font-size:11px;transition:all .2s">'
+      +'&#x2197; UniProt Full Record</a>'
+      +'<a href="'+p.fasta_url+'" target="_blank" style="padding:7px 14px;border-radius:var(--r);'
+      +'border:1px solid var(--border);color:var(--teal);text-decoration:none;'
+      +'font-family:var(--ff-m);font-size:11px">'
+      +'&#x2193; Download FASTA</a>'
+      +'</div>';
+
+    // BLAST placeholder
+    html+='<div class="blast-box"><div class="blast-title">&#x26A1; BLAST Search</div>'
+      +'<div class="blast-body">BLAST integration coming soon. Will submit this protein\'s sequence '
+      +'to NCBI BLAST and return similarity hits with e-value, identity %, and alignment coverage.</div>'
+      +'<button class="blast-btn" disabled>Run BLAST (coming soon)</button></div>';
+
+    // Sequence preview
+    if(a.sequence){
+      var seq=a.sequence;
+      html+='<div class="ibox">'
+        +'<div class="ilbl">Sequence preview (first 60 aa)</div>'
+        +'<div class="ival mono" style="font-size:11px;letter-spacing:.05em;word-break:break-all;color:rgba(226,234,244,.5)">'+seq.substring(0,60)+(seq.length>60?'\u2026':'')+'</div></div>';
+    }
+
+    dbody.innerHTML=html;
+  }catch(e){
+    dhead.innerHTML='<div style="color:rgba(226,234,244,.5);padding:10px">Error loading protein</div>';
+    dbody.innerHTML='<p style="color:rgba(226,234,244,.35);padding:16px;font-size:13px">Could not load details. Check that Flask is running on port 5001.</p>';
+  }
+}
+
+function closeOverlay(e){if(e.target===document.getElementById('overlay'))closeOverlayBtn();}
+function closeOverlayBtn(){
+  document.getElementById('overlay').classList.remove('open');
+  document.body.style.overflow='';
+}
+
+// ── HP BROWSER ────────────────────────────────────────────────────────────────
+var currentFilter='all';
+
+async function loadHPBrowser(){
+  var wrap=document.getElementById('hp-table-wrap');
+  if(!wrap.classList.contains('hidden'))return;
+
+  try{
+    var r=await fetch(API+'/api/weka?limit=314');
+    allWekaRows=await r.json();
+    wekaLoaded=true;
+    renderHPTable(allWekaRows);
+    document.getElementById('hp-spinner').classList.add('hidden');
+    wrap.classList.remove('hidden');
+  }catch(e){
+    document.getElementById('hp-spinner').classList.add('hidden');
+    wrap.innerHTML='<p style="color:rgba(226,234,244,.35);font-size:13px;font-family:var(--ff-m)">Backend not reachable. Start Flask on port 5001.</p>';
+    wrap.classList.remove('hidden');
+  }
+}
+
+function filterHP(el,f){
+  currentFilter=f;
+  document.querySelectorAll('.fchip').forEach(function(c){c.classList.remove('active');});
+  el.classList.add('active');
+  var filtered=f==='all'?allWekaRows:allWekaRows.filter(function(r){return String(r.class_label)===f;});
+  renderHPTable(filtered);
+}
+
+function renderHPTable(rows){
+  var wrap=document.getElementById('hp-table-wrap');
+  var cols=['c1','c2','c3','c4','c5','c6','c7'];
+  var colLabels=['C1 Family','C2 Orthology','C3 Interaction','C4 BBH','C5 Signal','C6 Pseudo','C7 Homology'];
+  var html='<table class="hp-table"><thead><tr>'
+    +'<th>HP Label</th><th>UniProt ID</th><th>Organism</th>'
+    +colLabels.map(function(l){return '<th>'+l+'</th>';}).join('')
+    +'<th>CLASS</th></tr></thead><tbody>';
+  rows.forEach(function(row){
+    var cls=row.class_label===1?'<span class="class-badge cb-path" style="font-size:10px">Pathogenic</span>'
+      :row.class_label===0?'<span class="class-badge cb-none" style="font-size:10px">Non-path.</span>'
+      :'<span class="class-badge cb-unk" style="font-size:10px">?</span>';
+    var uid=row.uniprot_id||'';
+    html+='<tr onclick="openDetail(\''+uid+'\')">'
+      +'<td style="color:var(--teal)">'+row.hp_label+'</td>'
+      +'<td>'+(uid||'\u2014')+'</td>'
+      +'<td style="color:rgba(226,234,244,.5);max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+(row.organism||'\u2014')+'</td>'
+      +cols.map(function(c){return '<td><div class="'+(row[c]?'dot-hit':'dot-miss')+'"></div></td>';}).join('')
+      +'<td>'+cls+'</td></tr>';
+  });
+  html+='</tbody></table>';
+  wrap.innerHTML=html;
+}
+
+// ── DATA REFRESH ─────────────────────────────────────────────────────────────
+async function doCheck(){
+  var btn=document.getElementById('check-btn'),toast=document.getElementById('rtoast');
+  var rfBtn=document.getElementById('refresh-btn');
+  btn.innerHTML='<span style="display:inline-block;animation:spin .8s linear infinite">\u27F3</span> Checking\u2026';
+  try{
+    var r=await fetch(API+'/api/data/check');var d=await r.json();
+    btn.innerHTML='\u27F3 Check for Updates';
+    if(d.has_updates){
+      btn.classList.add('glow');rfBtn.classList.remove('hidden');
+      toast.innerHTML='<div class="rt">\u2756 Updates found</div>'
+        +'<div class="rr"><span>New files</span><span class="rv">'+(d.new_files?d.new_files.length:0)+'</span></div>'
+        +'<div class="rr"><span>Changed files</span><span class="rv">'+(d.changed_files?d.changed_files.length:0)+'</span></div>'
+        +'<div style="margin-top:6px;font-size:10px;opacity:.5">Click Refresh Data to ingest</div>';
+      toast.classList.remove('hidden');
+    }else{
+      btn.classList.remove('glow');rfBtn.classList.add('hidden');
+      toast.innerHTML='<div class="rt" style="color:rgba(226,234,244,.5)">\u2713 Data is up to date</div><div style="font-size:11px;opacity:.4;margin-top:3px">No new files found</div>';
+      toast.classList.remove('hidden');setTimeout(function(){toast.classList.add('hidden');},3000);
+    }
+  }catch(e){
+    btn.innerHTML='\u27F3 Check for Updates';
+    toast.innerHTML='<div style="color:#ef9a9a">Backend not reachable.<br>Start Flask on port 5001.</div>';
+    toast.classList.remove('hidden');setTimeout(function(){toast.classList.add('hidden');},4000);
+  }
+}
+
+async function doRefresh(){
+  var rfBtn=document.getElementById('refresh-btn'),toast=document.getElementById('rtoast');
+  rfBtn.innerHTML='<span style="display:inline-block;animation:spin .8s linear infinite">\u21BB</span> Ingesting\u2026';
+  rfBtn.disabled=true;
+  try{
+    var r=await fetch(API+'/api/data/refresh',{method:'POST'});var d=await r.json();
+    rfBtn.innerHTML='\u21BB Refresh Data';rfBtn.disabled=false;rfBtn.classList.add('hidden');
+    document.getElementById('check-btn').classList.remove('glow');
+    toast.innerHTML='<div class="rt">\u2756 Refreshed</div>'
+      +'<div class="rr"><span>Files processed</span><span class="rv">'+(d.files_processed?d.files_processed.length:0)+'</span></div>'
+      +'<div class="rr"><span>WEKA rows</span><span class="rv">'+(d.weka_rows||0)+'</span></div>'
+      +'<div class="rr"><span>Proteins added</span><span class="rv">'+(d.proteins_added||0)+'</span></div>';
+    toast.classList.remove('hidden');loadStats();
+    setTimeout(function(){toast.classList.add('hidden');},5000);
+  }catch(e){rfBtn.innerHTML='\u21BB Refresh Data';rfBtn.disabled=false;}
+}
+</script>
+</body>
+</html>
